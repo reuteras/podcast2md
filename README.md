@@ -26,7 +26,7 @@ podcast2md leverages OpenAI's Whisper for offline speech-to-text conversion, cre
 
 ## Prerequisites
 
-- Python 3.8+
+- Python 3.12+
 - FFmpeg (required for audio processing)
 - [uv](https://github.com/astral-sh/uv) package manager
 
@@ -58,7 +58,7 @@ First create an alias for **podcast2md**:
 
 
 ```bash
-alias podcast2md="uvx run github.com/reuteras/podcast2md"
+alias podcast2md="uvx --with git+https://github.com/reuteras/podcast2md podcast2md"
 ```
 
 ### Basic Usage

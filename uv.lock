@@ -381,7 +381,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/f5/77/952ca71515f81919b
 
 [[package]]
 name = "podcast2md"
-version = "0.0.1"
+version = "0.0.2"
 source = { editable = "." }
 dependencies = [
     { name = "mutagen" },

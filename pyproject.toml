@@ -1,6 +1,6 @@
 [project]
 name = "podcast2md"
-version = "0.0.1"
+version = "0.0.2"
 description = "Transcribe a podcast to Markdown"
 readme = "README.md"
 authors = [
