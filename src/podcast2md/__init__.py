@@ -9,6 +9,7 @@ import warnings
 from urllib.parse import urlparse
 import mutagen
 import glob
+import shutil
 
 # Suppress specific warnings
 warnings.filterwarnings("ignore", message="FP16 is not supported on CPU; using FP32 instead")
@@ -56,6 +57,10 @@ def extract_metadata(audio_file):
     """Extract metadata from audio file"""
     metadata = {}
     output_dir = os.path.dirname(os.path.abspath(audio_file))
+
+    # Create images directory
+    images_dir = os.path.join(output_dir, "images")
+    os.makedirs(images_dir, exist_ok=True)
 
     try:
         audio = mutagen.File(audio_file)
@@ -115,11 +120,14 @@ def extract_metadata(audio_file):
         if 'cover_data' in locals():
             base_filename = os.path.basename(os.path.splitext(audio_file)[0])
             cover_filename = f"{base_filename}_cover.jpg"
-            # Save to the same directory as the output file
-            cover_path = os.path.join(output_dir, cover_filename)
+
+            # Save to the images directory instead of the same directory
+            cover_path = os.path.join(images_dir, cover_filename)
             with open(cover_path, 'wb') as f:
                 f.write(cover_data)
-            readable_metadata['cover_image'] = cover_path
+
+            # Store the relative path to the image for markdown
+            readable_metadata['cover_image'] = os.path.join("images", cover_filename)
     except Exception as e:
         print(f"Error extracting cover art: {e}")
 
@@ -492,6 +500,10 @@ def save_transcript_markdown(result, audio_file, metadata=None, output_path=None
     output_file = get_output_filename(audio_file, output_path)
     output_dir = os.path.dirname(output_file)
 
+    # Create images directory if it doesn't exist
+    images_dir = os.path.join(output_dir, "images")
+    os.makedirs(images_dir, exist_ok=True)
+
     # Get existing vault files if vault path is provided
     vault_files = get_existing_vault_files(vault_path) if vault_path else None
     if vault_files:
@@ -605,12 +617,10 @@ def save_transcript_markdown(result, audio_file, metadata=None, output_path=None
 
             f.write("\n")
 
-            # Add cover image if available with relative path
+            # Add cover image if available with path to images directory
             if 'cover_image' in metadata:
-                # Ensure the cover image path is relative to the output file
-                cover_path = metadata['cover_image']
-                rel_cover_path = os.path.relpath(cover_path, output_dir)
-                f.write(f"![Podcast Cover]({rel_cover_path})\n\n")
+                cover_rel_path = metadata['cover_image']
+                f.write(f"![Podcast Cover]({cover_rel_path})\n\n")
         elif source_url:
             # If no metadata but we have a URL
             f.write("### Source\n\n")
@@ -632,6 +642,31 @@ def save_transcript_markdown(result, audio_file, metadata=None, output_path=None
             # Sort by footnote number
             for number, url in sorted(footnote_references):
                 f.write(f"[^{number}]: {url}\n")
+
+    # Move any remaining images to the images directory and update references
+    for file in os.listdir(output_dir):
+        if file.endswith(('.jpg', '.jpeg', '.png', '.gif')) and file != "images" and os.path.isfile(os.path.join(output_dir, file)):
+            src_path = os.path.join(output_dir, file)
+            dst_path = os.path.join(images_dir, file)
+
+            # Move the file
+            shutil.move(src_path, dst_path)
+
+            # Update image references in the markdown file
+            with open(output_file, 'r') as f:
+                content = f.read()
+
+            # Replace direct file references with references to images directory
+            updated_content = re.sub(
+                r'!\[([^\]]*)\]\(([^)]+)\)',
+                lambda m: f'![{m.group(1)}](images/{os.path.basename(m.group(2))})' if os.path.basename(m.group(2)) == file else m.group(0),
+                content
+            )
+
+            with open(output_file, 'w') as f:
+                f.write(updated_content)
+
+            print(f"Moved image {file} to images directory and updated references")
 
     print(f"Markdown transcript saved to {output_file}")
     return output_file
