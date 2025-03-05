@@ -54,61 +54,68 @@ choco install ffmpeg
 
 ## Usage
 
+First create an alias for **podcast2md**:
+
+
+```bash
+alias podcast2md="uvx run github.com/reuteras/podcast2md"
+```
+
 ### Basic Usage
 
 Transcribe a local podcast file:
 ```bash
-uvx run github.com/reuteras/podcast2md my_podcast.mp3
+podcast2md my_podcast.mp3
 ```
 
 Transcribe from a URL:
 ```bash
-uvx run github.com/reuteras/podcast2md https://example.com/podcast.mp3
+podcast2md https://example.com/podcast.mp3
 ```
 
 ### Output Options
 
 Specify output location:
 ```bash
-uvx run github.com/reuteras/podcast2md podcast.mp3 --output transcripts/
-uvx run github.com/reuteras/podcast2md podcast.mp3 --output transcripts/episode42.md
+podcast2md podcast.mp3 --output transcripts/
+podcast2md podcast.mp3 --output transcripts/episode42.md
 ```
 
 ### Model Selection
 
 Choose the Whisper model size based on your needs for accuracy vs. speed:
 ```bash
-uvx run github.com/reuteras/podcast2md podcast.mp3 --model tiny    # Fastest, least accurate
-uvx run github.com/reuteras/podcast2md podcast.mp3 --model base    # Good balance (default)
-uvx run github.com/reuteras/podcast2md podcast.mp3 --model medium  # Better accuracy
-uvx run github.com/reuteras/podcast2md podcast.mp3 --model large   # Best accuracy, slowest
+podcast2md podcast.mp3 --model tiny    # Fastest, least accurate
+podcast2md podcast.mp3 --model base    # Good balance (default)
+podcast2md podcast.mp3 --model medium  # Better accuracy
+podcast2md podcast.mp3 --model large   # Best accuracy, slowest
 ```
 
 ### Formatting Options
 
 Apply rich text formatting:
 ```bash
-uvx run github.com/reuteras/podcast2md podcast.mp3 --format
+podcast2md podcast.mp3 --format
 ```
 
 Create Obsidian-style wiki links:
 ```bash
-uvx run github.com/reuteras/podcast2md podcast.mp3 --links
+podcast2md podcast.mp3 --links
 ```
 
 Add external references as footnotes:
 ```bash
-uvx run github.com/reuteras/podcast2md podcast.mp3 --refs
+podcast2md podcast.mp3 --refs
 ```
 
 Link to existing files in Obsidian vault:
 ```bash
-uvx run github.com/reuteras/podcast2md podcast.mp3 --links --vault /path/to/obsidian/vault
+podcast2md podcast.mp3 --links --vault /path/to/obsidian/vault
 ```
 
 Combine multiple options:
 ```bash
-uvx run github.com/reuteras/podcast2md podcast.mp3 --format --links --refs --vault /path/to/obsidian/vault
+podcast2md podcast.mp3 --format --links --refs --vault /path/to/obsidian/vault
 ```
 
 ## Example Output
