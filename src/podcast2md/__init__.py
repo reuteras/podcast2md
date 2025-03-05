@@ -682,7 +682,7 @@ def save_transcript_markdown(result, audio_file, metadata=None, output_path=None
 def main():
     parser = argparse.ArgumentParser(description="Transcribe podcast audio files using Whisper")
     parser.add_argument("audio", help="Path to the audio file or URL")
-    parser.add_argument("--model", default="base", choices=["tiny", "base", "small", "medium", "large"],
+    parser.add_argument("--model", default="base", choices=["tiny", "tiny.en", "base", "base.en", "small", "small.en", "medium", "medium.en", "large"],
                         help="Whisper model size to use")
     parser.add_argument("--output", default=None,
                         help="Output file path or directory (defaults to current directory)")
