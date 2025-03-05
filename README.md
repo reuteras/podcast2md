@@ -37,25 +37,24 @@ No installation required! Simply use `uvx` to run the tool directly from the rep
 Make sure you have FFmpeg installed:
 
 **macOS**:
+
 ```bash
 brew install ffmpeg
 ```
 
-**Ubuntu/Debian**:
+**Linux**:
+
 ```bash
 sudo apt update && sudo apt install ffmpeg
 ```
 
 **Windows**:
-Download from the [FFmpeg website](https://ffmpeg.org/download.html) or install via Chocolatey:
-```bash
-choco install ffmpeg
-```
+
+Download from the [FFmpeg website](https://ffmpeg.org/download.html).
 
 ## Usage
 
 First create an alias for **podcast2md**:
-
 
 ```bash
 alias podcast2md="uvx --with git+https://github.com/reuteras/podcast2md podcast2md"
@@ -64,11 +63,13 @@ alias podcast2md="uvx --with git+https://github.com/reuteras/podcast2md podcast2
 ### Basic Usage
 
 Transcribe a local podcast file:
+
 ```bash
 podcast2md my_podcast.mp3
 ```
 
 Transcribe from a URL:
+
 ```bash
 podcast2md https://example.com/podcast.mp3
 ```
@@ -76,6 +77,7 @@ podcast2md https://example.com/podcast.mp3
 ### Output Options
 
 Specify output location:
+
 ```bash
 podcast2md podcast.mp3 --output transcripts/
 podcast2md podcast.mp3 --output transcripts/episode42.md
@@ -84,6 +86,7 @@ podcast2md podcast.mp3 --output transcripts/episode42.md
 ### Model Selection
 
 Choose the Whisper model size based on your needs for accuracy vs. speed:
+
 ```bash
 podcast2md podcast.mp3 --model tiny    # Fastest, least accurate
 podcast2md podcast.mp3 --model base    # Good balance (default)
@@ -94,26 +97,31 @@ podcast2md podcast.mp3 --model large   # Best accuracy, slowest
 ### Formatting Options
 
 Apply rich text formatting:
+
 ```bash
 podcast2md podcast.mp3 --format
 ```
 
 Create Obsidian-style wiki links:
+
 ```bash
 podcast2md podcast.mp3 --links
 ```
 
 Add external references as footnotes:
+
 ```bash
 podcast2md podcast.mp3 --refs
 ```
 
 Link to existing files in Obsidian vault:
+
 ```bash
 podcast2md podcast.mp3 --links --vault /path/to/obsidian/vault
 ```
 
 Combine multiple options:
+
 ```bash
 podcast2md podcast.mp3 --format --links --refs --vault /path/to/obsidian/vault
 ```
