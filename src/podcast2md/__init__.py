@@ -495,7 +495,8 @@ def post_process_transcript(paragraphs, apply_formatting=False, create_links=Fal
     return processed_paragraphs, footnote_map
 
 def save_transcript_markdown(result, audio_file, metadata=None, output_path=None, source_url=None,
-                             apply_formatting=False, create_links=False, create_refs=False, vault_path=None):
+                             apply_formatting=False, create_links=False, create_refs=False, vault_path=None,
+                             episode_url=None):
     """Save transcription to a markdown file with metadata and paragraphs"""
     output_file = get_output_filename(audio_file, output_path)
     output_dir = os.path.dirname(output_file)
@@ -615,6 +616,10 @@ def save_transcript_markdown(result, audio_file, metadata=None, output_path=None
             if source_url:
                 f.write(f"- **Source URL**: {source_url}\n")
 
+            # Add episode URL if available
+            if episode_url:
+                f.write(f"- **Episode URL**: {episode_url}\n")
+
             f.write("\n")
 
             # Add cover image if available with path to images directory
@@ -624,7 +629,10 @@ def save_transcript_markdown(result, audio_file, metadata=None, output_path=None
         elif source_url:
             # If no metadata but we have a URL
             f.write("### Source\n\n")
-            f.write(f"- **URL**: {source_url}\n\n")
+            f.write(f"- **URL**: {source_url}\n")
+            if episode_url:
+                f.write(f"- **Episode URL**: {episode_url}\n")
+            f.write("\n")
 
         # Add transcript with sections if available
         f.write("## Content\n\n")
@@ -686,6 +694,8 @@ def main():
                         help="Add external references as footnotes")
     parser.add_argument("--vault", default=None,
                         help="Path to Obsidian vault for linking to existing files")
+    parser.add_argument("--episode-url", default=None,
+                        help="URL to the episode page online (different from audio source URL)")
 
     args = parser.parse_args()
 
@@ -720,7 +730,8 @@ def main():
         apply_formatting=args.format,
         create_links=args.links,
         create_refs=args.refs,
-        vault_path=args.vault
+        vault_path=args.vault,
+        episode_url=args.episode_url
     )
 
 if __name__ == "__main__":
