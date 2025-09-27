@@ -4,7 +4,6 @@ import whisper
 import argparse
 import re
 import requests
-import tempfile
 import warnings
 from urllib.parse import urlparse
 import mutagen
@@ -19,7 +18,7 @@ def is_url(path):
     try:
         result = urlparse(path)
         return all([result.scheme, result.netloc])
-    except:
+    except: # noqa E722
         return False
 
 def download_file(url, output_dir=None):
