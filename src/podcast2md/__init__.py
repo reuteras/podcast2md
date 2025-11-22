@@ -1,4 +1,5 @@
 """podcast2md"""
+
 import os
 import whisper
 import argparse
@@ -11,15 +12,19 @@ import glob
 import shutil
 
 # Suppress specific warnings
-warnings.filterwarnings("ignore", message="FP16 is not supported on CPU; using FP32 instead")
+warnings.filterwarnings(
+    "ignore", message="FP16 is not supported on CPU; using FP32 instead"
+)
+
 
 def is_url(path):
     """Check if the provided path is a URL"""
     try:
         result = urlparse(path)
         return all([result.scheme, result.netloc])
-    except: # noqa E722
+    except:  # noqa E722
         return False
+
 
 def download_file(url, output_dir=None):
     """Download file from URL to the specified output directory"""
@@ -45,12 +50,13 @@ def download_file(url, output_dir=None):
     response = requests.get(url, stream=True)
     response.raise_for_status()
 
-    with open(output_file, 'wb') as f:
+    with open(output_file, "wb") as f:
         for chunk in response.iter_content(chunk_size=8192):
             f.write(chunk)
 
     print(f"Downloaded to {output_file}")
     return output_file, url
+
 
 def extract_metadata(audio_file):
     """Extract metadata from audio file"""
@@ -65,72 +71,85 @@ def extract_metadata(audio_file):
         audio = mutagen.File(audio_file)
         if audio is not None:
             # Extract common metadata fields
-            if hasattr(audio, 'tags') and audio.tags:
+            if hasattr(audio, "tags") and audio.tags:
                 for key in audio.tags.keys():
                     metadata[key] = str(audio.tags[key])
 
             # For MP3 files (ID3 tags)
-            if hasattr(audio, 'ID3'):
-                for key in ['TIT2', 'TPE1', 'TALB', 'TDRC', 'TCON', 'COMM']:
+            if hasattr(audio, "ID3"):
+                for key in ["TIT2", "TPE1", "TALB", "TDRC", "TCON", "COMM"]:
                     if key in audio:
                         metadata[key] = str(audio[key])
 
             # For MP4/M4A files
-            if hasattr(audio, 'items'):
+            if hasattr(audio, "items"):
                 for key, value in audio.items():
                     metadata[key] = str(value)
 
             # Look for chapters in metadata
             chapters = []
-            if hasattr(audio, 'chapters'):
+            if hasattr(audio, "chapters"):
                 chapters = audio.chapters
-            elif 'CHAP' in metadata:
-                chapters.append(metadata['CHAP'])
+            elif "CHAP" in metadata:
+                chapters.append(metadata["CHAP"])
     except Exception as e:
         print(f"Error extracting metadata: {e}")
 
     # Create readable metadata dictionary
     readable_metadata = {}
-    readable_metadata['title'] = metadata.get('TIT2', metadata.get('©nam', metadata.get('title', '')))
-    readable_metadata['artist'] = metadata.get('TPE1', metadata.get('©ART', metadata.get('artist', '')))
-    readable_metadata['album'] = metadata.get('TALB', metadata.get('©alb', metadata.get('album', '')))
-    readable_metadata['date'] = metadata.get('TDRC', metadata.get('©day', metadata.get('date', '')))
-    readable_metadata['genre'] = metadata.get('TCON', metadata.get('©gen', metadata.get('genre', '')))
-    readable_metadata['comment'] = metadata.get('COMM', metadata.get('©cmt', metadata.get('comment', '')))
+    readable_metadata["title"] = metadata.get(
+        "TIT2", metadata.get("©nam", metadata.get("title", ""))
+    )
+    readable_metadata["artist"] = metadata.get(
+        "TPE1", metadata.get("©ART", metadata.get("artist", ""))
+    )
+    readable_metadata["album"] = metadata.get(
+        "TALB", metadata.get("©alb", metadata.get("album", ""))
+    )
+    readable_metadata["date"] = metadata.get(
+        "TDRC", metadata.get("©day", metadata.get("date", ""))
+    )
+    readable_metadata["genre"] = metadata.get(
+        "TCON", metadata.get("©gen", metadata.get("genre", ""))
+    )
+    readable_metadata["comment"] = metadata.get(
+        "COMM", metadata.get("©cmt", metadata.get("comment", ""))
+    )
 
     # Extract chapters if available
-    if 'chapters' in locals() and chapters:
-        readable_metadata['chapters'] = chapters
+    if "chapters" in locals() and chapters:
+        readable_metadata["chapters"] = chapters
 
     # Extract cover art if available
     try:
         cover_path = None
-        if hasattr(audio, 'pictures'):
+        if hasattr(audio, "pictures"):
             for p in audio.pictures:
                 cover_data = p.data
                 break
-        elif hasattr(audio, 'tags') and hasattr(audio.tags, 'getall'):
-            apic = audio.tags.getall('APIC')
+        elif hasattr(audio, "tags") and hasattr(audio.tags, "getall"):
+            apic = audio.tags.getall("APIC")
             if apic:
                 cover_data = apic[0].data
-        elif 'covr' in metadata:
-            cover_data = metadata['covr']
+        elif "covr" in metadata:
+            cover_data = metadata["covr"]
 
-        if 'cover_data' in locals():
+        if "cover_data" in locals():
             base_filename = os.path.basename(os.path.splitext(audio_file)[0])
             cover_filename = f"{base_filename}_cover.jpg"
 
             # Save to the images directory instead of the same directory
             cover_path = os.path.join(images_dir, cover_filename)
-            with open(cover_path, 'wb') as f:
+            with open(cover_path, "wb") as f:
                 f.write(cover_data)
 
             # Store the relative path to the image for markdown
-            readable_metadata['cover_image'] = os.path.join("images", cover_filename)
+            readable_metadata["cover_image"] = os.path.join("images", cover_filename)
     except Exception as e:
         print(f"Error extracting cover art: {e}")
 
     return readable_metadata
+
 
 def transcribe_audio(audio_file, model_size="base"):
     """
@@ -152,6 +171,7 @@ def transcribe_audio(audio_file, model_size="base"):
 
     return result
 
+
 def identify_sections(segments, metadata):
     """
     Identify section breaks in the transcript based on metadata
@@ -166,42 +186,51 @@ def identify_sections(segments, metadata):
     sections = []
 
     # Extract chapter information from metadata if available
-    if 'chapters' in metadata and metadata['chapters']:
-        chapters = metadata['chapters']
+    if "chapters" in metadata and metadata["chapters"]:
+        chapters = metadata["chapters"]
         for chapter in chapters:
             # Format depends on the specific metadata format, adjust as needed
-            if hasattr(chapter, 'start') and hasattr(chapter, 'title'):
+            if hasattr(chapter, "start") and hasattr(chapter, "title"):
                 sections.append((chapter.start, chapter.title))
-            elif isinstance(chapter, dict) and 'start' in chapter and 'title' in chapter:
-                sections.append((chapter['start'], chapter['title']))
+            elif (
+                isinstance(chapter, dict) and "start" in chapter and "title" in chapter
+            ):
+                sections.append((chapter["start"], chapter["title"]))
 
     # If no chapters in metadata, attempt to detect section breaks heuristically
     if not sections and len(segments) > 10:
         # Look for longer pauses between segments
         for i in range(1, len(segments)):
-            prev_end = segments[i-1]['end']
-            curr_start = segments[i]['start']
+            prev_end = segments[i - 1]["end"]
+            curr_start = segments[i]["start"]
 
             # If there's a significant pause (more than 2 seconds)
             if curr_start - prev_end > 2.0:
                 # Look for section indicator phrases
-                text = segments[i]['text'].strip()
+                text = segments[i]["text"].strip()
                 section_indicators = [
-                    "chapter", "section", "part", "episode",
-                    "segment", "act", "introduction", "conclusion"
+                    "chapter",
+                    "section",
+                    "part",
+                    "episode",
+                    "segment",
+                    "act",
+                    "introduction",
+                    "conclusion",
                 ]
 
                 if any(indicator in text.lower() for indicator in section_indicators):
-                    sections.append((segments[i]['start'], text))
+                    sections.append((segments[i]["start"], text))
 
     return sections
+
 
 def format_paragraphs(segments):
     """Break text into reasonably sized paragraphs without extra line breaks"""
     # First, join all text
     full_text = ""
     for segment in segments:
-        text = segment['text'].strip()
+        text = segment["text"].strip()
 
         # Ensure there's a space between segments but no extra line breaks
         if full_text and not full_text.endswith(" "):
@@ -210,10 +239,10 @@ def format_paragraphs(segments):
         full_text += text
 
     # Clean up extra whitespace
-    full_text = re.sub(r'\s+', ' ', full_text).strip()
+    full_text = re.sub(r"\s+", " ", full_text).strip()
 
     # Split into sentences (basic rule: split on . ! ?)
-    sentences = re.split(r'(?<=[.!?])\s+', full_text)
+    sentences = re.split(r"(?<=[.!?])\s+", full_text)
 
     paragraphs = []
     current_para = []
@@ -224,9 +253,12 @@ def format_paragraphs(segments):
     for sentence in sentences:
         sentence_length = len(sentence)
 
-        if current_length + sentence_length > max_length and len(current_para) >= min_sentences:
+        if (
+            current_length + sentence_length > max_length
+            and len(current_para) >= min_sentences
+        ):
             # Start a new paragraph if current one is getting too long
-            paragraphs.append(' '.join(current_para))
+            paragraphs.append(" ".join(current_para))
             current_para = [sentence]
             current_length = sentence_length
         else:
@@ -236,9 +268,10 @@ def format_paragraphs(segments):
 
     # Add the last paragraph if there's anything left
     if current_para:
-        paragraphs.append(' '.join(current_para))
+        paragraphs.append(" ".join(current_para))
 
     return paragraphs
+
 
 def get_output_filename(input_path, output_path=None):
     """Determine the output filename based on input and output paths"""
@@ -258,6 +291,7 @@ def get_output_filename(input_path, output_path=None):
         base_name = os.path.basename(os.path.splitext(input_path)[0])
         return os.path.join(os.getcwd(), f"{base_name}.md")
 
+
 def get_existing_vault_files(vault_path):
     """Get a list of existing markdown files in the Obsidian vault"""
     if not vault_path or not os.path.isdir(vault_path):
@@ -265,11 +299,12 @@ def get_existing_vault_files(vault_path):
 
     # Find all markdown files in the vault
     md_files = []
-    for ext in ['.md', '.markdown']:
+    for ext in [".md", ".markdown"]:
         md_files.extend(glob.glob(f"{vault_path}/**/*{ext}", recursive=True))
 
     # Extract just the base filename without extension
     return [os.path.splitext(os.path.basename(f))[0] for f in md_files]
+
 
 def find_best_match(term, existing_files):
     """Find the shortest matching existing file for a term"""
@@ -277,7 +312,7 @@ def find_best_match(term, existing_files):
         return None
 
     # Convert term to lowercase and remove special characters
-    clean_term = re.sub(r'[^a-zA-Z0-9\s]', '', term.lower())
+    clean_term = re.sub(r"[^a-zA-Z0-9\s]", "", term.lower())
 
     # Check for exact matches first (with shortest length if multiple matches)
     exact_matches = [file for file in existing_files if file.lower() == clean_term]
@@ -301,6 +336,7 @@ def find_best_match(term, existing_files):
 
     return None
 
+
 def apply_text_formatting(text, apply_formatting=False):
     """Apply rich text formatting to the transcript text"""
     if not apply_formatting:
@@ -309,25 +345,31 @@ def apply_text_formatting(text, apply_formatting=False):
     # Define patterns for various types of content to format
     patterns = [
         # Format Windows executables (.exe files) as bold
-        (r'\b([a-zA-Z0-9]+\.exe)\b', r'**\1**'),
-        (r'\b(smss|csrss|winlogon|lsass|services|svchost|explorer|userinit|winit|wininet|lsm)(?:\.exe)?\b', r'**\1.exe**'),
-
+        (r"\b([a-zA-Z0-9]+\.exe)\b", r"**\1**"),
+        (
+            r"\b(smss|csrss|winlogon|lsass|services|svchost|explorer|userinit|winit|wininet|lsm)(?:\.exe)?\b",
+            r"**\1.exe**",
+        ),
         # Format Windows system terms and concepts as italic
-        (r'\b(kernel|system idle|idle process|system process|session manager subsystem|client server runtime subsystem|windows initialization|service control manager|local security authority subsystem|credential guard)\b', r'*\1*'),
-
+        (
+            r"\b(kernel|system idle|idle process|system process|session manager subsystem|client server runtime subsystem|windows initialization|service control manager|local security authority subsystem|credential guard)\b",
+            r"*\1*",
+        ),
         # Format technical abbreviations as bold-italic
-        (r'\b(SMSS|CSRSS|LSASS|PID|DFIR|DLL|UI|LSM|SAM|LSAISO)\b', r'***\1***'),
-
+        (r"\b(SMSS|CSRSS|LSASS|PID|DFIR|DLL|UI|LSM|SAM|LSAISO)\b", r"***\1***"),
         # Format registry references
-        (r'\b(registry (key|hive)s?|HKEY_[A-Z_]+)\b', r'*\1*'),
+        (r"\b(registry (key|hive)s?|HKEY_[A-Z_]+)\b", r"*\1*"),
     ]
 
     # Apply each pattern
     formatted_text = text
     for pattern, replacement in patterns:
-        formatted_text = re.sub(pattern, replacement, formatted_text, flags=re.IGNORECASE)
+        formatted_text = re.sub(
+            pattern, replacement, formatted_text, flags=re.IGNORECASE
+        )
 
     return formatted_text
+
 
 def add_obsidian_links(text, create_links=False, vault_files=None):
     """
@@ -347,30 +389,53 @@ def add_obsidian_links(text, create_links=False, vault_files=None):
     # Define key terms and their destinations
     link_patterns = [
         # Core Windows processes
-        (r'\b(smss\.exe|session manager subsystem)\b', 'Windows Process - SMSS', 'Session Manager Subsystem'),
-        (r'\b(csrss\.exe|client server runtime subsystem)\b', 'Windows Process - CSRSS', 'Client Server Runtime Subsystem'),
-        (r'\b(winlogon\.exe)\b', 'Windows Process - WinLogon', 'WinLogon'),
-        (r'\b(lsass\.exe|local security authority subsystem service)\b', 'Windows Process - LSASS', 'Local Security Authority Subsystem'),
-        (r'\b(services\.exe|service control manager)\b', 'Windows Process - Services', 'Service Control Manager'),
-        (r'\b(svchost\.exe|service host)\b', 'Windows Process - SvcHost', 'Service Host'),
-        (r'\b(explorer\.exe)\b', 'Windows Process - Explorer', 'Windows Explorer'),
-
+        (
+            r"\b(smss\.exe|session manager subsystem)\b",
+            "Windows Process - SMSS",
+            "Session Manager Subsystem",
+        ),
+        (
+            r"\b(csrss\.exe|client server runtime subsystem)\b",
+            "Windows Process - CSRSS",
+            "Client Server Runtime Subsystem",
+        ),
+        (r"\b(winlogon\.exe)\b", "Windows Process - WinLogon", "WinLogon"),
+        (
+            r"\b(lsass\.exe|local security authority subsystem service)\b",
+            "Windows Process - LSASS",
+            "Local Security Authority Subsystem",
+        ),
+        (
+            r"\b(services\.exe|service control manager)\b",
+            "Windows Process - Services",
+            "Service Control Manager",
+        ),
+        (
+            r"\b(svchost\.exe|service host)\b",
+            "Windows Process - SvcHost",
+            "Service Host",
+        ),
+        (r"\b(explorer\.exe)\b", "Windows Process - Explorer", "Windows Explorer"),
         # DFIR concepts
-        (r'\b(DFIR|digital forensics|incident response)\b', 'Digital Forensics and Incident Response', 'DFIR'),
-        (r'\b(triage)\b', 'DFIR Triage Process', 'Triage'),
-        (r'\b(windows internals)\b', 'Windows Internals', 'Windows Internals'),
-        (r'\b(persistence)\b', 'Malware Persistence Techniques', 'Persistence'),
-        (r'\bmalware\b', 'Malware Analysis', 'Malware'),
-
+        (
+            r"\b(DFIR|digital forensics|incident response)\b",
+            "Digital Forensics and Incident Response",
+            "DFIR",
+        ),
+        (r"\b(triage)\b", "DFIR Triage Process", "Triage"),
+        (r"\b(windows internals)\b", "Windows Internals", "Windows Internals"),
+        (r"\b(persistence)\b", "Malware Persistence Techniques", "Persistence"),
+        (r"\bmalware\b", "Malware Analysis", "Malware"),
         # Registry related
-        (r'\b(registry)\b', 'Windows Registry', 'Registry'),
-        (r'\b(active directory)\b', 'Active Directory', 'Active Directory'),
-        (r'\b(SAM database)\b', 'Security Accounts Manager', 'SAM Database'),
+        (r"\b(registry)\b", "Windows Registry", "Registry"),
+        (r"\b(active directory)\b", "Active Directory", "Active Directory"),
+        (r"\b(SAM database)\b", "Security Accounts Manager", "SAM Database"),
     ]
 
     # Apply each link pattern
     linked_text = text
     for pattern, default_page, display_text in link_patterns:
+
         def replace_with_link(match):
             # If we have vault files, try to find a matching file
             if vault_files:
@@ -388,9 +453,12 @@ def add_obsidian_links(text, create_links=False, vault_files=None):
             else:
                 return f"[[{page_name}|{match.group(0)}]]"
 
-        linked_text = re.sub(pattern, replace_with_link, linked_text, flags=re.IGNORECASE)
+        linked_text = re.sub(
+            pattern, replace_with_link, linked_text, flags=re.IGNORECASE
+        )
 
     return linked_text
+
 
 def add_external_references(text, create_refs=False, footnote_map=None):
     """
@@ -413,19 +481,34 @@ def add_external_references(text, create_refs=False, footnote_map=None):
 
     # Define key terms and their external references
     reference_patterns = [
-        ('Windows', 'https://www.microsoft.com/windows/'),
-        ('Microsoft', 'https://www.microsoft.com/'),
-        ('DFIR', 'https://www.sans.org/digital-forensics/'),
-        ('forensics', 'https://www.sans.org/digital-forensics/'),
-        ('malware', 'https://www.malwarebytes.com/'),
-        ('active directory', 'https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/get-started/virtual-dc/active-directory-domain-services-overview'),
-        ('registry', 'https://learn.microsoft.com/en-us/windows/win32/sysinfo/registry'),
-        ('Autopsy', 'https://www.autopsy.com/'),
-        ('CyberTriage', 'https://www.cybertriage.com/'),
-        ('Atola', 'https://atola.com/'),
-        ('smss.exe', 'https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/session-manager-system-processes'),
-        ('lsass.exe', 'https://learn.microsoft.com/en-us/windows-server/security/credentials-protection-and-management/configuring-additional-lsa-protection'),
-        ('svchost.exe', 'https://learn.microsoft.com/en-us/windows-server/security/windows-services/service-isolation-and-security-hardening'),
+        ("Windows", "https://www.microsoft.com/windows/"),
+        ("Microsoft", "https://www.microsoft.com/"),
+        ("DFIR", "https://www.sans.org/digital-forensics/"),
+        ("forensics", "https://www.sans.org/digital-forensics/"),
+        ("malware", "https://www.malwarebytes.com/"),
+        (
+            "active directory",
+            "https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/get-started/virtual-dc/active-directory-domain-services-overview",
+        ),
+        (
+            "registry",
+            "https://learn.microsoft.com/en-us/windows/win32/sysinfo/registry",
+        ),
+        ("Autopsy", "https://www.autopsy.com/"),
+        ("CyberTriage", "https://www.cybertriage.com/"),
+        ("Atola", "https://atola.com/"),
+        (
+            "smss.exe",
+            "https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/session-manager-system-processes",
+        ),
+        (
+            "lsass.exe",
+            "https://learn.microsoft.com/en-us/windows-server/security/credentials-protection-and-management/configuring-additional-lsa-protection",
+        ),
+        (
+            "svchost.exe",
+            "https://learn.microsoft.com/en-us/windows-server/security/windows-services/service-isolation-and-security-hardening",
+        ),
     ]
 
     # Process the text to handle Obsidian links properly
@@ -436,7 +519,7 @@ def add_external_references(text, create_refs=False, footnote_map=None):
         nonlocal processed_text
 
         # Split the text by Obsidian links
-        parts = re.split(r'(\[\[[^\]]+\]\])', processed_text)
+        parts = re.split(r"(\[\[[^\]]+\]\])", processed_text)
         result = []
 
         for i, part in enumerate(parts):
@@ -449,7 +532,9 @@ def add_external_references(text, create_refs=False, footnote_map=None):
             part_text = part
             for term, url in reference_patterns:
                 # Skip if the term is not in this part (case insensitive)
-                if not re.search(r'\b' + re.escape(term) + r'\b', part_text, re.IGNORECASE):
+                if not re.search(
+                    r"\b" + re.escape(term) + r"\b", part_text, re.IGNORECASE
+                ):
                     continue
 
                 # Add a footnote only for the first occurrence of each term
@@ -459,19 +544,28 @@ def add_external_references(text, create_refs=False, footnote_map=None):
                 footnote_number = footnote_map[term.lower()]
 
                 # Replace only the first occurrence
-                pattern = r'\b' + re.escape(term) + r'\b'
-                replacement = r'\g<0>[^' + str(footnote_number) + ']'
-                part_text = re.sub(pattern, replacement, part_text, count=1, flags=re.IGNORECASE)
+                pattern = r"\b" + re.escape(term) + r"\b"
+                replacement = r"\g<0>[^" + str(footnote_number) + "]"
+                part_text = re.sub(
+                    pattern, replacement, part_text, count=1, flags=re.IGNORECASE
+                )
 
             result.append(part_text)
 
-        processed_text = ''.join(result)
+        processed_text = "".join(result)
 
     process_references()
 
     return processed_text, footnote_map
 
-def post_process_transcript(paragraphs, apply_formatting=False, create_links=False, create_refs=False, vault_files=None):
+
+def post_process_transcript(
+    paragraphs,
+    apply_formatting=False,
+    create_links=False,
+    create_refs=False,
+    vault_files=None,
+):
     """Apply post-processing to transcript paragraphs"""
     processed_paragraphs = []
     footnote_map = {}
@@ -487,15 +581,27 @@ def post_process_transcript(paragraphs, apply_formatting=False, create_links=Fal
 
         # Add external references if requested
         if create_refs:
-            paragraph, footnote_map = add_external_references(paragraph, create_refs, footnote_map)
+            paragraph, footnote_map = add_external_references(
+                paragraph, create_refs, footnote_map
+            )
 
         processed_paragraphs.append(paragraph)
 
     return processed_paragraphs, footnote_map
 
-def save_transcript_markdown(result, audio_file, metadata=None, output_path=None, source_url=None,
-                             apply_formatting=False, create_links=False, create_refs=False, vault_path=None,
-                             episode_url=None):
+
+def save_transcript_markdown(
+    result,
+    audio_file,
+    metadata=None,
+    output_path=None,
+    source_url=None,
+    apply_formatting=False,
+    create_links=False,
+    create_refs=False,
+    vault_path=None,
+    episode_url=None,
+):
     """Save transcription to a markdown file with metadata and paragraphs"""
     output_file = get_output_filename(audio_file, output_path)
     output_dir = os.path.dirname(output_file)
@@ -542,16 +648,24 @@ def save_transcript_markdown(result, audio_file, metadata=None, output_path=None
             # Check if this segment starts a new section
             new_section = False
             for sec_time, sec_title in sections:
-                if segment['start'] >= sec_time and (i == 0 or segments[i-1]['start'] < sec_time):
+                if segment["start"] >= sec_time and (
+                    i == 0 or segments[i - 1]["start"] < sec_time
+                ):
                     # If we already have content, add the current section
                     if current_section_segments:
                         section_paragraphs = format_paragraphs(current_section_segments)
                         # Apply post-processing
                         section_paragraphs, footnotes = post_process_transcript(
-                            section_paragraphs, apply_formatting, create_links, create_refs, vault_files
+                            section_paragraphs,
+                            apply_formatting,
+                            create_links,
+                            create_refs,
+                            vault_files,
                         )
                         all_footnotes.update(footnotes)
-                        section_content.append((current_section_name, section_paragraphs))
+                        section_content.append(
+                            (current_section_name, section_paragraphs)
+                        )
 
                     # Start new section
                     current_section_name = sec_title
@@ -567,7 +681,11 @@ def save_transcript_markdown(result, audio_file, metadata=None, output_path=None
             section_paragraphs = format_paragraphs(current_section_segments)
             # Apply post-processing
             section_paragraphs, footnotes = post_process_transcript(
-                section_paragraphs, apply_formatting, create_links, create_refs, vault_files
+                section_paragraphs,
+                apply_formatting,
+                create_links,
+                create_refs,
+                vault_files,
             )
             all_footnotes.update(footnotes)
             section_content.append((current_section_name, section_paragraphs))
@@ -577,19 +695,34 @@ def save_transcript_markdown(result, audio_file, metadata=None, output_path=None
     for term, footnote_num in all_footnotes.items():
         # Find the URL for this term
         reference_patterns = [
-            ('Windows', 'https://www.microsoft.com/windows/'),
-            ('Microsoft', 'https://www.microsoft.com/'),
-            ('DFIR', 'https://www.sans.org/digital-forensics/'),
-            ('forensics', 'https://www.sans.org/digital-forensics/'),
-            ('malware', 'https://www.malwarebytes.com/'),
-            ('active directory', 'https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/get-started/virtual-dc/active-directory-domain-services-overview'),
-            ('registry', 'https://learn.microsoft.com/en-us/windows/win32/sysinfo/registry'),
-            ('Autopsy', 'https://www.autopsy.com/'),
-            ('CyberTriage', 'https://www.cybertriage.com/'),
-            ('Atola', 'https://atola.com/'),
-            ('smss.exe', 'https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/session-manager-system-processes'),
-            ('lsass.exe', 'https://learn.microsoft.com/en-us/windows-server/security/credentials-protection-and-management/configuring-additional-lsa-protection'),
-            ('svchost.exe', 'https://learn.microsoft.com/en-us/windows-server/security/windows-services/service-isolation-and-security-hardening'),
+            ("Windows", "https://www.microsoft.com/windows/"),
+            ("Microsoft", "https://www.microsoft.com/"),
+            ("DFIR", "https://www.sans.org/digital-forensics/"),
+            ("forensics", "https://www.sans.org/digital-forensics/"),
+            ("malware", "https://www.malwarebytes.com/"),
+            (
+                "active directory",
+                "https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/get-started/virtual-dc/active-directory-domain-services-overview",
+            ),
+            (
+                "registry",
+                "https://learn.microsoft.com/en-us/windows/win32/sysinfo/registry",
+            ),
+            ("Autopsy", "https://www.autopsy.com/"),
+            ("CyberTriage", "https://www.cybertriage.com/"),
+            ("Atola", "https://atola.com/"),
+            (
+                "smss.exe",
+                "https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/session-manager-system-processes",
+            ),
+            (
+                "lsass.exe",
+                "https://learn.microsoft.com/en-us/windows-server/security/credentials-protection-and-management/configuring-additional-lsa-protection",
+            ),
+            (
+                "svchost.exe",
+                "https://learn.microsoft.com/en-us/windows-server/security/windows-services/service-isolation-and-security-hardening",
+            ),
         ]
 
         for ref_term, url in reference_patterns:
@@ -602,13 +735,15 @@ def save_transcript_markdown(result, audio_file, metadata=None, output_path=None
         f.write("# Podcast Transcript\n\n")
 
         if metadata:
-            if metadata.get('title'):
+            if metadata.get("title"):
                 f.write(f"## {metadata['title']}\n\n")
 
             # Add metadata section
             f.write("### Metadata\n\n")
             for key, value in metadata.items():
-                if key not in ['cover_image', 'chapters'] and value:  # Skip cover image path and chapters
+                if (
+                    key not in ["cover_image", "chapters"] and value
+                ):  # Skip cover image path and chapters
                     f.write(f"- **{key.capitalize()}**: {value}\n")
 
             # Add source URL if available
@@ -622,8 +757,8 @@ def save_transcript_markdown(result, audio_file, metadata=None, output_path=None
             f.write("\n")
 
             # Add cover image if available with path to images directory
-            if 'cover_image' in metadata:
-                cover_rel_path = metadata['cover_image']
+            if "cover_image" in metadata:
+                cover_rel_path = metadata["cover_image"]
                 f.write(f"![Podcast Cover]({cover_rel_path})\n\n")
         elif source_url:
             # If no metadata but we have a URL
@@ -652,7 +787,11 @@ def save_transcript_markdown(result, audio_file, metadata=None, output_path=None
 
     # Move any remaining images to the images directory and update references
     for file in os.listdir(output_dir):
-        if file.endswith(('.jpg', '.jpeg', '.png', '.gif')) and file != "images" and os.path.isfile(os.path.join(output_dir, file)):
+        if (
+            file.endswith((".jpg", ".jpeg", ".png", ".gif"))
+            and file != "images"
+            and os.path.isfile(os.path.join(output_dir, file))
+        ):
             src_path = os.path.join(output_dir, file)
             dst_path = os.path.join(images_dir, file)
 
@@ -660,17 +799,19 @@ def save_transcript_markdown(result, audio_file, metadata=None, output_path=None
             shutil.move(src_path, dst_path)
 
             # Update image references in the markdown file
-            with open(output_file, 'r') as f:
+            with open(output_file, "r") as f:
                 content = f.read()
 
             # Replace direct file references with references to images directory
             updated_content = re.sub(
-                r'!\[([^\]]*)\]\(([^)]+)\)',
-                lambda m: f'![{m.group(1)}](images/{os.path.basename(m.group(2))})' if os.path.basename(m.group(2)) == file else m.group(0),
-                content
+                r"!\[([^\]]*)\]\(([^)]+)\)",
+                lambda m: f"![{m.group(1)}](images/{os.path.basename(m.group(2))})"
+                if os.path.basename(m.group(2)) == file
+                else m.group(0),
+                content,
             )
 
-            with open(output_file, 'w') as f:
+            with open(output_file, "w") as f:
                 f.write(updated_content)
 
             print(f"Moved image {file} to images directory and updated references")
@@ -678,23 +819,56 @@ def save_transcript_markdown(result, audio_file, metadata=None, output_path=None
     print(f"Markdown transcript saved to {output_file}")
     return output_file
 
+
 def main():
-    parser = argparse.ArgumentParser(description="Transcribe podcast audio files using Whisper")
+    parser = argparse.ArgumentParser(
+        description="Transcribe podcast audio files using Whisper"
+    )
     parser.add_argument("audio", help="Path to the audio file or URL")
-    parser.add_argument("--model", default="base", choices=["tiny", "tiny.en", "base", "base.en", "small", "small.en", "medium", "medium.en", "large"],
-                        help="Whisper model size to use")
-    parser.add_argument("--output", default=None,
-                        help="Output file path or directory (defaults to current directory)")
-    parser.add_argument("--format", action="store_true",
-                        help="Apply rich text formatting (bold, italics) to key terms")
-    parser.add_argument("--links", action="store_true",
-                        help="Create Obsidian-style links for key terms and concepts")
-    parser.add_argument("--refs", action="store_true",
-                        help="Add external references as footnotes")
-    parser.add_argument("--vault", default=None,
-                        help="Path to Obsidian vault for linking to existing files")
-    parser.add_argument("--episode-url", default=None,
-                        help="URL to the episode page online (different from audio source URL)")
+    parser.add_argument(
+        "--model",
+        default="base",
+        choices=[
+            "tiny",
+            "tiny.en",
+            "base",
+            "base.en",
+            "small",
+            "small.en",
+            "medium",
+            "medium.en",
+            "large",
+        ],
+        help="Whisper model size to use",
+    )
+    parser.add_argument(
+        "--output",
+        default=None,
+        help="Output file path or directory (defaults to current directory)",
+    )
+    parser.add_argument(
+        "--format",
+        action="store_true",
+        help="Apply rich text formatting (bold, italics) to key terms",
+    )
+    parser.add_argument(
+        "--links",
+        action="store_true",
+        help="Create Obsidian-style links for key terms and concepts",
+    )
+    parser.add_argument(
+        "--refs", action="store_true", help="Add external references as footnotes"
+    )
+    parser.add_argument(
+        "--vault",
+        default=None,
+        help="Path to Obsidian vault for linking to existing files",
+    )
+    parser.add_argument(
+        "--episode-url",
+        default=None,
+        help="URL to the episode page online (different from audio source URL)",
+    )
 
     args = parser.parse_args()
 
@@ -730,8 +904,9 @@ def main():
         create_links=args.links,
         create_refs=args.refs,
         vault_path=args.vault,
-        episode_url=args.episode_url
+        episode_url=args.episode_url,
     )
+
 
 if __name__ == "__main__":
     main()
