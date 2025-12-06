@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Peter Reuterås", email = "peter@reuteras.net" }
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.14"
 dependencies = [
     "mutagen>=1.47.0",
     "openai-whisper>=20240930",
