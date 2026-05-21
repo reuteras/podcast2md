@@ -1,7 +1,10 @@
 """podcast2md"""
 
 import os
+from importlib.metadata import version as _pkg_version
 from faster_whisper import WhisperModel
+
+__version__ = _pkg_version("podcast2md")
 import argparse
 import re
 import requests
@@ -828,6 +831,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Transcribe podcast audio files using Whisper"
     )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.add_argument("audio", help="Path to the audio file or URL")
     parser.add_argument(
         "--model",
