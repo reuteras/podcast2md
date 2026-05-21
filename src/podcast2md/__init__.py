@@ -1,7 +1,7 @@
 """podcast2md"""
 
 import os
-import whisper
+from faster_whisper import WhisperModel
 import argparse
 import re
 import requests
@@ -164,12 +164,16 @@ def transcribe_audio(audio_file, model_size="base"):
     dict: Transcription results including text
     """
     print(f"Loading Whisper {model_size} model...")
-    model = whisper.load_model(model_size)
+    model = WhisperModel(model_size)
 
     print(f"Transcribing {audio_file}...")
-    result = model.transcribe(audio_file)
+    segments, _ = model.transcribe(audio_file)
 
-    return result
+    segment_list = [
+        {"text": s.text, "start": s.start, "end": s.end}
+        for s in segments
+    ]
+    return {"segments": segment_list, "text": " ".join(s["text"] for s in segment_list)}
 
 
 def identify_sections(segments, metadata):
