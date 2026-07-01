@@ -9,7 +9,7 @@ authors = [
 requires-python = ">=3.12,<3.14"
 dependencies = [
     "faster-whisper>=1.1.1",
-    "mutagen>=1.47.0",
+    "mutagen>=1.48.0",
     "requests>=2.32.0",
 ]
 
