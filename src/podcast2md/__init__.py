@@ -2,17 +2,19 @@
 
 import os
 from importlib.metadata import version as _pkg_version
+
 from faster_whisper import WhisperModel
 
 __version__ = _pkg_version("podcast2md")
 import argparse
+import glob
 import re
-import requests
+import shutil
 import warnings
 from urllib.parse import urlparse
+
 import mutagen
-import glob
-import shutil
+import requests
 
 # Suppress specific warnings
 warnings.filterwarnings(
@@ -54,8 +56,7 @@ def download_file(url, output_dir=None):
     response.raise_for_status()
 
     with open(output_file, "wb") as f:
-        for chunk in response.iter_content(chunk_size=8192):
-            f.write(chunk)
+        f.writelines(response.iter_content(chunk_size=8192))
 
     print(f"Downloaded to {output_file}")
     return output_file, url
@@ -75,7 +76,7 @@ def extract_metadata(audio_file):
         if audio is not None:
             # Extract common metadata fields
             if hasattr(audio, "tags") and audio.tags:
-                for key in audio.tags.keys():
+                for key in audio.tags:
                     metadata[key] = str(audio.tags[key])
 
             # For MP3 files (ID3 tags)
@@ -95,7 +96,7 @@ def extract_metadata(audio_file):
                 chapters = audio.chapters
             elif "CHAP" in metadata:
                 chapters.append(metadata["CHAP"])
-    except Exception as e:
+    except (mutagen.MutagenError, OSError) as e:
         print(f"Error extracting metadata: {e}")
 
     # Create readable metadata dictionary
@@ -148,7 +149,7 @@ def extract_metadata(audio_file):
 
             # Store the relative path to the image for markdown
             readable_metadata["cover_image"] = os.path.join("images", cover_filename)
-    except Exception as e:
+    except (mutagen.MutagenError, OSError) as e:
         print(f"Error extracting cover art: {e}")
 
     return readable_metadata
@@ -193,7 +194,7 @@ def identify_sections(segments, metadata):
     sections = []
 
     # Extract chapter information from metadata if available
-    if "chapters" in metadata and metadata["chapters"]:
+    if metadata.get("chapters"):
         chapters = metadata["chapters"]
         for chapter in chapters:
             # Format depends on the specific metadata format, adjust as needed
@@ -443,7 +444,7 @@ def add_obsidian_links(text, create_links=False, vault_files=None):
     linked_text = text
     for pattern, default_page, display_text in link_patterns:
 
-        def replace_with_link(match):
+        def replace_with_link(match, default_page=default_page, display_text=display_text):
             # If we have vault files, try to find a matching file
             if vault_files:
                 best_match = find_best_match(default_page, vault_files)
@@ -782,8 +783,7 @@ def save_transcript_markdown(
             if section_name != "Transcript":  # Don't add heading for generic transcript
                 f.write(f"### {section_name}\n\n")
 
-            for paragraph in paragraphs:
-                f.write(f"{paragraph}\n\n")
+            f.writelines(f"{paragraph}\n\n" for paragraph in paragraphs)
 
         # Add footnotes if any
         if footnote_references:
@@ -812,7 +812,7 @@ def save_transcript_markdown(
             # Replace direct file references with references to images directory
             updated_content = re.sub(
                 r"!\[([^\]]*)\]\(([^)]+)\)",
-                lambda m: f"![{m.group(1)}](images/{os.path.basename(m.group(2))})"
+                lambda m, file=file: f"![{m.group(1)}](images/{os.path.basename(m.group(2))})"
                 if os.path.basename(m.group(2)) == file
                 else m.group(0),
                 content,
