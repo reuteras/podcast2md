@@ -138,6 +138,7 @@ A typical output file includes:
 ## Customization
 
 If you wish to customize the tool, you can clone the repository and modify:
+
 - Paragraph length and sentence thresholds
 - Technical terms for formatting
 - External reference links
