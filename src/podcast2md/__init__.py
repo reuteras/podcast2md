@@ -173,10 +173,7 @@ def transcribe_audio(audio_file, model_size="base"):
     print(f"Transcribing {audio_file}...")
     segments, _ = model.transcribe(audio_file)
 
-    segment_list = [
-        {"text": s.text, "start": s.start, "end": s.end}
-        for s in segments
-    ]
+    segment_list = [{"text": s.text, "start": s.start, "end": s.end} for s in segments]
     return {"segments": segment_list, "text": " ".join(s["text"] for s in segment_list)}
 
 
@@ -444,7 +441,9 @@ def add_obsidian_links(text, create_links=False, vault_files=None):
     linked_text = text
     for pattern, default_page, display_text in link_patterns:
 
-        def replace_with_link(match, default_page=default_page, display_text=display_text):
+        def replace_with_link(
+            match, default_page=default_page, display_text=display_text
+        ):
             # If we have vault files, try to find a matching file
             if vault_files:
                 best_match = find_best_match(default_page, vault_files)
@@ -812,9 +811,11 @@ def save_transcript_markdown(
             # Replace direct file references with references to images directory
             updated_content = re.sub(
                 r"!\[([^\]]*)\]\(([^)]+)\)",
-                lambda m, file=file: f"![{m.group(1)}](images/{os.path.basename(m.group(2))})"
-                if os.path.basename(m.group(2)) == file
-                else m.group(0),
+                lambda m, file=file: (
+                    f"![{m.group(1)}](images/{os.path.basename(m.group(2))})"
+                    if os.path.basename(m.group(2)) == file
+                    else m.group(0)
+                ),
                 content,
             )
 
@@ -831,7 +832,9 @@ def main():
     parser = argparse.ArgumentParser(
         description="Transcribe podcast audio files using Whisper"
     )
-    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
+    parser.add_argument(
+        "--version", action="version", version=f"%(prog)s {__version__}"
+    )
     parser.add_argument("audio", help="Path to the audio file or URL")
     parser.add_argument(
         "--model",
